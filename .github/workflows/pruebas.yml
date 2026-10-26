@@ -10,7 +10,7 @@ on:                                   # ¿CUÁNDO se ejecuta?
 jobs:
   api:
     name: Pruebas de API
-    runs-on: ubuntu-latest            # ¿DÓNDE? una máquina limpia en cada run
+    runs-on: ubuntu-24.04            # ¿DÓNDE? una máquina limpia en cada run
     defaults:
       run:
         working-directory: api
@@ -36,7 +36,7 @@ jobs:
   web:
     name: Pruebas web (E2E)
     needs: api                        # solo si la API pasó (lo rápido primero)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: web
@@ -70,7 +70,7 @@ jobs:
     needs: [api, web]
     # también cuando fallan las pruebas, pero solo desde main (un PR no reemplaza el sitio)
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pages: write                    # publicar en GitHub Pages

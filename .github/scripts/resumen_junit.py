@@ -1,9 +1,10 @@
-"""Convierte un reporte JUnit XML en una tabla Markdown para la página del run (resumen del job).
+"""Convierte un reporte JUnit XML en un resumen Markdown para la página del run (resumen del job).
 
 Uso:  python resumen_junit.py "<título>" <reporte.xml>
 
-En GitHub Actions escribe en $GITHUB_STEP_SUMMARY; fuera de GitHub, imprime en la consola.
-Solo usa la biblioteca estándar: no hay que instalar nada en el runner.
+La tabla muestra solo lo que requiere atención (fallos y fallos esperados); las pruebas que pasan
+quedan plegadas en una lista. En GitHub Actions escribe en $GITHUB_STEP_SUMMARY; fuera de GitHub,
+imprime en la consola. Solo usa la biblioteca estándar: no hay que instalar nada en el runner.
 """
 
 import os
@@ -23,9 +24,7 @@ RESULTADOS = {  # orden de la tabla: primero lo que hay que mirar
 @dataclass
 class Caso:
     nombre: str
-    suite: str
     resultado: str  # una clave de RESULTADOS
-    segundos: float
     detalle: str
 
 
@@ -50,19 +49,17 @@ def leer_junit(ruta: Path) -> list[Caso]:
         else:
             resultado, detalle = "passed", ""
 
-        nombre, suite = _nombre_y_suite(caso.get("name", ""), caso.get("classname", ""))
-        casos.append(Caso(nombre, suite, resultado, float(caso.get("time") or 0), detalle))
+        casos.append(Caso(_nombre(caso.get("name", "")), resultado, detalle))
     return casos
 
 
-def _nombre_y_suite(nombre: str, clase: str) -> tuple[str, str]:
-    if " › " in nombre:  # Playwright: "Feature › Scenario"
-        suite, _, escenario = nombre.rpartition(" › ")
-        return escenario, suite
-    if nombre.startswith("test_"):  # pytest: test_c1_filtrar_por_nombre → "C1 filtrar por nombre"
+def _nombre(nombre: str) -> str:
+    if " › " in nombre:  # Playwright: "Feature › Scenario" → "Scenario"
+        return nombre.rpartition(" › ")[2]
+    if nombre.startswith("test_"):  # pytest: test_crear_una_reserva → "Crear una reserva"
         nombre = nombre.removeprefix("test_").replace("_", " ")
         nombre = nombre[:1].upper() + nombre[1:]
-    return nombre, clase.rpartition(".")[2]  # tests.restful_booker.test_demo → test_demo
+    return nombre
 
 
 def _detalle_del_fallo(fallo: ET.Element) -> str:
@@ -95,22 +92,22 @@ def resumen_markdown(titulo: str, ruta: Path) -> str:
     cuenta = {clave: sum(c.resultado == clave for c in casos) for clave in RESULTADOS}
     icono = "❌" if cuenta["failed"] else "✅"
     totales = " · ".join(f"{n} {clave}" for clave, n in totales_a_mostrar(cuenta))
-    segundos = sum(c.segundos for c in casos)
+    lineas = [f"## {icono} {titulo}", "", f"**{totales}** · {len(casos)} pruebas", ""]
 
-    lineas = [
-        f"## {icono} {titulo}",
-        "",
-        f"**{totales}** · {len(casos)} pruebas en {segundos:.1f} s",
-        "",
-        "| Resultado | Prueba | Suite | Tiempo | Detalle |",
-        "|---|---|---|---:|---|",
-    ]
-    orden = list(RESULTADOS)
-    for c in sorted(casos, key=lambda c: orden.index(c.resultado)):
-        lineas.append(
-            f"| {RESULTADOS[c.resultado]} | {_celda(c.nombre)} | {_celda(c.suite)} "
-            f"| {c.segundos:.1f} s | {_celda(c.detalle)} |"
-        )
+    a_revisar = [c for c in casos if c.resultado != "passed"]
+    if a_revisar:
+        lineas += ["| Resultado | Prueba | Detalle |", "|---|---|---|"]
+        orden = list(RESULTADOS)
+        for c in sorted(a_revisar, key=lambda c: orden.index(c.resultado)):
+            lineas.append(f"| {RESULTADOS[c.resultado]} | {_celda(c.nombre)} | {_celda(c.detalle)} |")
+        lineas.append("")
+
+    pasaron = [c.nombre for c in casos if c.resultado == "passed"]
+    if pasaron:
+        resumen = "✅ 1 prueba pasó" if len(pasaron) == 1 else f"✅ {len(pasaron)} pruebas pasaron"
+        lineas += [f"<details><summary>{resumen}</summary>", ""]  # la línea en blanco es obligatoria
+        lineas += [f"- {_celda(nombre)}" for nombre in pasaron]
+        lineas += ["", "</details>"]
     return "\n".join(lineas) + "\n"
 
 
