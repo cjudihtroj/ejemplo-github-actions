@@ -15,6 +15,14 @@ from tests.restful_booker.datos import ADMIN
 BOOKER_URL = os.getenv("BOOKER_URL", "https://restful-booker.herokuapp.com")
 
 
+def pytest_collection_modifyitems(items):
+    """Copia las etiquetas @HU-xx y @CP-xx de cada escenario al JUnit XML (matriz de trazabilidad)."""
+    for item in items:
+        for marca in item.iter_markers():
+            if marca.name.startswith(("HU-", "CP-")):
+                item.user_properties.append((marca.name[:2], marca.name))
+
+
 @pytest.fixture(scope="session")
 def booker():
     """Cliente HTTP de Restful Booker. Por defecto pide las respuestas en JSON."""

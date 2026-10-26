@@ -26,6 +26,12 @@ class Caso:
     nombre: str
     resultado: str  # una clave de RESULTADOS
     detalle: str
+    hu: str = ""  # etiquetas @HU-xx y @CP-xx del escenario (propiedades del JUnit XML)
+    cp: str = ""
+
+    @property
+    def titulo(self) -> str:
+        return f"{self.cp} · {self.nombre}" if self.cp else self.nombre
 
 
 def leer_junit(ruta: Path) -> list[Caso]:
@@ -49,7 +55,9 @@ def leer_junit(ruta: Path) -> list[Caso]:
         else:
             resultado, detalle = "passed", ""
 
-        casos.append(Caso(_nombre(caso.get("name", "")), resultado, detalle))
+        etiquetas = {p.get("name"): p.get("value", "") for p in caso.iterfind("properties/property")}
+        casos.append(Caso(_nombre(caso.get("name", "")), resultado, detalle,
+                          etiquetas.get("HU", ""), etiquetas.get("CP", "")))
     return casos
 
 
@@ -99,10 +107,10 @@ def resumen_markdown(titulo: str, ruta: Path) -> str:
         lineas += ["| Resultado | Prueba | Detalle |", "|---|---|---|"]
         orden = list(RESULTADOS)
         for c in sorted(a_revisar, key=lambda c: orden.index(c.resultado)):
-            lineas.append(f"| {RESULTADOS[c.resultado]} | {_celda(c.nombre)} | {_celda(c.detalle)} |")
+            lineas.append(f"| {RESULTADOS[c.resultado]} | {_celda(c.titulo)} | {_celda(c.detalle)} |")
         lineas.append("")
 
-    pasaron = [c.nombre for c in casos if c.resultado == "passed"]
+    pasaron = [c.titulo for c in casos if c.resultado == "passed"]
     if pasaron:
         resumen = "✅ 1 prueba pasó" if len(pasaron) == 1 else f"✅ {len(pasaron)} pruebas pasaron"
         lineas += [f"<details><summary>{resumen}</summary>", ""]  # la línea en blanco es obligatoria
