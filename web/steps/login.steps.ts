@@ -1,8 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 import { PaginaLogin } from '../pages/PaginaLogin';
+import { test } from './fixtures';
 
-const { Given, When, Then } = createBdd();
+const { Given, When, Then } = createBdd(test);
 
 Given('que el administrador está en la página de login', async ({ page }) => {
   await new PaginaLogin(page).abrir();

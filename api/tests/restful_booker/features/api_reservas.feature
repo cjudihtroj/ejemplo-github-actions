@@ -27,3 +27,23 @@ Feature: API de reservas de Restful Booker
     Given que existe una reserva a nombre de "Utec" con precio total 120
     When se elimina la reserva sin token
     Then la respuesta tiene el estado 403
+
+  @CP-07
+  Scenario: Crear una reserva con datos incompletos
+    When se crea una reserva solo con el nombre
+    Then la respuesta tiene el estado 400
+
+  @CP-08
+  Scenario: Crear una reserva con la salida antes que la entrada
+    When se crea una reserva con entrada "2026-11-15" y salida "2026-11-10"
+    Then la respuesta tiene el estado 400
+
+  @CP-09
+  Scenario: Crear una reserva con precio negativo
+    When se crea una reserva a nombre de "Utec" con precio total -50
+    Then la respuesta tiene el estado 400
+
+  @CP-10
+  Scenario: Obtener un token con una clave incorrecta
+    When se solicita un token con usuario "admin" y clave "incorrecta"
+    Then la respuesta tiene el estado 401

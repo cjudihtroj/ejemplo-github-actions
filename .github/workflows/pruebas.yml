@@ -1,4 +1,4 @@
-name: Pruebas
+name: Pruebas automatizadas de API y web
 
 on:                                   # ¿CUÁNDO se ejecuta?
   push:

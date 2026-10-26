@@ -37,11 +37,14 @@ def leer_junit(ruta: Path) -> list[Caso]:
         if fallo is None:
             fallo = caso.find("error")
         omitido = caso.find("skipped")
+        fallo_esperado = caso.find("properties/property[@name='fail']")  # Playwright: test.fail(…, motivo)
 
         if fallo is not None:
             resultado, detalle = "failed", _detalle_del_fallo(fallo)
         elif omitido is not None and omitido.get("type") == "pytest.xfail":
             resultado, detalle = "xfailed", omitido.get("message", "")  # el motivo: el defecto reportado
+        elif fallo_esperado is not None:
+            resultado, detalle = "xfailed", fallo_esperado.get("value", "")
         elif omitido is not None:
             resultado, detalle = "skipped", omitido.get("message", "")
         else:

@@ -4,13 +4,45 @@ Cada escenario envía UNA solicitud (el When) y verifica solo la respuesta (los 
 """
 
 import pytest
-from pytest_bdd import given, parsers, scenarios, then, when
+from pytest_bdd import given, parsers, scenario, scenarios, then, when
 
 from tests.restful_booker.datos import datos_de_reserva
 
 pytestmark = pytest.mark.booker
 
-scenarios("features/api_reservas.feature")
+FEATURE = "features/api_reservas.feature"
+
+
+# ---------------------------------------------------------------- Defectos reportados
+# Estos escenarios hoy fallan por un defecto conocido de Restful Booker. Quedan como fallo esperado
+# (xfail estricto): el pipeline sigue en verde y, si el defecto se corrige, el escenario pasa y avisa.
+
+
+@pytest.mark.xfail(reason="D-01: POST /booking con datos incompletos responde 500 en vez de 400", strict=True)
+@scenario(FEATURE, "Crear una reserva con datos incompletos")
+def test_crear_una_reserva_con_datos_incompletos():
+    pass
+
+
+@pytest.mark.xfail(reason="D-02: POST /booking acepta una salida anterior a la entrada (200 en vez de 400)", strict=True)
+@scenario(FEATURE, "Crear una reserva con la salida antes que la entrada")
+def test_crear_una_reserva_con_la_salida_antes_que_la_entrada():
+    pass
+
+
+@pytest.mark.xfail(reason="D-03: POST /booking acepta un precio total negativo (200 en vez de 400)", strict=True)
+@scenario(FEATURE, "Crear una reserva con precio negativo")
+def test_crear_una_reserva_con_precio_negativo():
+    pass
+
+
+@pytest.mark.xfail(reason="D-04: POST /auth con clave incorrecta responde 200 'Bad credentials' en vez de 401", strict=True)
+@scenario(FEATURE, "Obtener un token con una clave incorrecta")
+def test_obtener_un_token_con_una_clave_incorrecta():
+    pass
+
+
+scenarios(FEATURE)  # el resto de escenarios del archivo (va después de los vinculados a mano)
 
 
 @pytest.fixture
@@ -52,16 +84,37 @@ def consultar_reserva(booker, contexto, reserva_id):
     contexto["respuesta"] = booker.get(f"/booking/{reserva_id}")
 
 
-@when(parsers.parse('se crea una reserva a nombre de "{apellido}" con precio total {precio:d}'))
-def crear_reserva(booker, contexto, reservas_creadas, apellido, precio):
-    contexto["respuesta"] = booker.post("/booking", json=datos_de_reserva(lastname=apellido, totalprice=precio))
+def _crear(booker, contexto, reservas_creadas, datos):
+    """POST /booking. Si la reserva se crea (aunque no debía), se registra para eliminarla al terminar."""
+    contexto["respuesta"] = booker.post("/booking", json=datos)
     if contexto["respuesta"].status_code == 200:
         reservas_creadas.append(contexto["respuesta"].json()["bookingid"])
+
+
+@when(parsers.parse('se crea una reserva a nombre de "{apellido}" con precio total {precio:d}'))
+def crear_reserva(booker, contexto, reservas_creadas, apellido, precio):
+    _crear(booker, contexto, reservas_creadas, datos_de_reserva(lastname=apellido, totalprice=precio))
+
+
+@when(parsers.parse('se crea una reserva con entrada "{entrada}" y salida "{salida}"'))
+def crear_reserva_con_fechas(booker, contexto, reservas_creadas, entrada, salida):
+    fechas = {"checkin": entrada, "checkout": salida}
+    _crear(booker, contexto, reservas_creadas, datos_de_reserva(bookingdates=fechas))
+
+
+@when("se crea una reserva solo con el nombre")
+def crear_reserva_incompleta(booker, contexto, reservas_creadas):
+    _crear(booker, contexto, reservas_creadas, {"firstname": "SoloNombre"})
 
 
 @when("se elimina la reserva sin token")
 def eliminar_sin_token(booker, contexto):
     contexto["respuesta"] = booker.delete(f"/booking/{contexto['reserva_id']}")
+
+
+@when(parsers.parse('se solicita un token con usuario "{usuario}" y clave "{clave}"'))
+def solicitar_token(booker, contexto, usuario, clave):
+    contexto["respuesta"] = booker.post("/auth", json={"username": usuario, "password": clave})
 
 
 # ---------------------------------------------------------------- Then: verificar la respuesta
