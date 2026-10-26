@@ -1,0 +1,16 @@
+{
+  "name": "ejemplo-login",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CS5383 · Semana 11 · Gherkin + Page Object Model + Playwright (login de Shady Meadows)",
+  "scripts": {
+    "test": "bddgen && playwright test",
+    "test:headed": "bddgen && playwright test --headed",
+    "test:ui": "bddgen && playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "playwright-bdd": "9.2.1"
+  }
+}

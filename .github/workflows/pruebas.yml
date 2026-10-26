@@ -1,0 +1,60 @@
+name: Pruebas
+
+on:                                   # ¿CUÁNDO se ejecuta?
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:                  # botón "Run workflow" para ejecutarlo a mano
+
+jobs:
+  api:
+    name: Pruebas de API
+    runs-on: ubuntu-latest            # ¿DÓNDE? una máquina limpia en cada run
+    defaults:
+      run:
+        working-directory: api
+    steps:                            # ¿QUÉ? en orden
+      - uses: actions/checkout@v6     # 1. descargar el código
+      - uses: actions/setup-python@v5 # 2. instalar Python
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Ejecutar pruebas
+        run: pytest --junitxml=reportes/api-junit.xml
+      - name: Publicar reporte
+        uses: actions/upload-artifact@v5
+        if: ${{ !cancelled() }}
+        with:
+          name: reporte-api
+          path: api/reportes/
+
+  web:
+    name: Pruebas web (E2E)
+    needs: api                        # solo si la API pasó (lo rápido primero)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - name: Instalar dependencias
+        run: npm ci                   # instala exactamente lo del package-lock.json
+      - name: Instalar navegador
+        run: npx playwright install --with-deps chromium
+      - name: Ejecutar pruebas
+        run: npm test                 # bddgen && playwright test
+      - name: Publicar reporte
+        uses: actions/upload-artifact@v5
+        if: ${{ !cancelled() }}
+        with:
+          name: reporte-web
+          path: |
+            web/playwright-report/
+            web/test-results/
+            web/reportes/
+          retention-days: 30
