@@ -2,7 +2,7 @@
 
 CS5383 · Semana 12. Ejecuta en cada push o pull request a `main`:
 
-1. **Pruebas de API** (pytest + httpx, y pytest-bdd para los escenarios Gherkin) contra Restful Booker (S10).
+1. **Pruebas de API** (pytest-bdd + httpx: escenarios Gherkin) contra Restful Booker (S10).
 2. **Pruebas web** (Playwright + Gherkin + Page Object) del login de Shady Meadows (S11), solo si la API pasó.
 3. **Publicar reportes** en GitHub Pages (solo desde `main`, también cuando las pruebas fallan).
 
@@ -10,7 +10,7 @@ CS5383 · Semana 12. Ejecuta en cada push o pull request a `main`:
 
 | Capa | Para quién | Dónde se ve |
 |---|---|---|
-| **Resumen del job** | Quien revisa el run o el PR | Página del run (pestaña *Summary*): una tabla por suite, con los fallos primero y el motivo de cada *xfail* |
+| **Resumen del job** | Quien revisa el run o el PR | Página del run (pestaña *Summary*): una tabla por suite, con los fallos primero y el paso de Gherkin que falló |
 | **Reporte HTML** | Quien investiga un fallo | En **GitHub Pages** (un enlace, sin descargar nada) y dentro de los artefactos `reporte-api` y `reporte-web` |
 | **JUnit XML** | Herramientas (CI, Kiwi TCMS, Xray…) | Dentro de los artefactos: alimenta la trazabilidad |
 
@@ -25,7 +25,6 @@ ejemplo-github-actions/
 │       └── indice_reportes.py   portada del sitio de reportes (GitHub Pages)
 ├── api/                         pruebas de API (S10)
 │   ├── tests/restful_booker/
-│   │   ├── test_demo.py                     casos con pytest
 │   │   ├── features/api_reservas.feature
 │   │   └── test_bdd_api_reservas.py         pasos del .feature (pytest-bdd)
 │   ├── pytest.ini
@@ -45,7 +44,7 @@ cd api
 python -m venv .venv
 .venv\Scripts\activate           # Windows (Linux/macOS: source .venv/bin/activate)
 pip install -r requirements.txt
-pytest                                                    # 7 passed, 4 xfailed
+pytest                                                    # 4 passed
 pytest --html=reportes/api-reporte.html --self-contained-html   # con reporte HTML
 
 # Web
@@ -71,6 +70,4 @@ python ../.github/scripts/resumen_junit.py "Pruebas web" reportes/web-junit.xml
    - **Artifacts**: `reporte-api` (HTML y JUnit XML) y `reporte-web` (reporte HTML, JUnit XML y, si algo falló, captura y traza).
 5. Para ver un pipeline en rojo: crea una rama, cambia en `web/features/login.feature` el mensaje esperado por `"Credenciales inválidas"` y abre un pull request. El resumen muestra el paso que falló; el sitio de Pages no cambia, porque solo se publica desde `main`.
 
-> Las pruebas marcadas con `xfail` en `api/` corresponden a defectos conocidos de Restful Booker: el pipeline sigue en verde y el resumen las muestra como *xfailed*, con el defecto como motivo.
->
 > El sitio de Pages es **público** y muestra solo el último run de `main`. Los runs anteriores conservan sus artefactos (30 días para `reporte-web`).

@@ -10,7 +10,7 @@ import os
 import httpx
 import pytest
 
-from tests.restful_booker.datos import ADMIN, datos_de_reserva
+from tests.restful_booker.datos import ADMIN
 
 BOOKER_URL = os.getenv("BOOKER_URL", "https://restful-booker.herokuapp.com")
 
@@ -28,14 +28,3 @@ def token_booker(booker):
     respuesta = booker.post("/auth", json={"username": ADMIN[0], "password": ADMIN[1]})
     assert respuesta.status_code == 200
     return respuesta.json()["token"]
-
-
-@pytest.fixture
-def reserva(booker, token_booker):
-    """Crea una reserva propia para la prueba y la elimina al terminar (aunque la prueba falle)."""
-    datos = datos_de_reserva()
-    respuesta = booker.post("/booking", json=datos)
-    assert respuesta.status_code == 200, respuesta.text
-    reserva_id = respuesta.json()["bookingid"]
-    yield {"id": reserva_id, "datos": datos}
-    booker.delete(f"/booking/{reserva_id}", headers={"Cookie": f"token={token_booker}"})

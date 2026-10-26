@@ -1,3 +1,4 @@
+@HU-01 @web
 Feature: Inicio de sesión del administrador
   Como administrador del hotel
   quiero iniciar sesión en el panel
