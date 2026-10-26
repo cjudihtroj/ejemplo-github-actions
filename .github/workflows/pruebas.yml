@@ -22,7 +22,10 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r requirements.txt
       - name: Ejecutar pruebas
-        run: pytest --junitxml=reportes/api-junit.xml
+        run: pytest --junitxml=reportes/api-junit.xml --html=reportes/api-reporte.html --self-contained-html
+      - name: Resumen en la página del run
+        if: ${{ !cancelled() }}
+        run: python ../.github/scripts/resumen_junit.py "Pruebas de API" reportes/api-junit.xml
       - name: Publicar reporte
         uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
@@ -48,6 +51,9 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Ejecutar pruebas
         run: npm test                 # bddgen && playwright test
+      - name: Resumen en la página del run
+        if: ${{ !cancelled() }}
+        run: python3 ../.github/scripts/resumen_junit.py "Pruebas web (E2E)" reportes/web-junit.xml
       - name: Publicar reporte
         uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
@@ -58,3 +64,38 @@ jobs:
             web/test-results/
             web/reportes/
           retention-days: 30
+
+  reportes:
+    name: Publicar reportes (GitHub Pages)
+    needs: [api, web]
+    # también cuando fallan las pruebas, pero solo desde main (un PR no reemplaza el sitio)
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write                    # publicar en GitHub Pages
+      id-token: write                 # lo exige actions/deploy-pages
+      actions: read
+    concurrency:                      # un despliegue a la vez; no se cancela uno a medias
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6     # solo para tener el script de la portada
+      - name: Descargar los reportes del run
+        uses: actions/download-artifact@v7
+        with:
+          path: sitio                 # una subcarpeta por artefacto: sitio/reporte-api, sitio/reporte-web
+      - name: Armar la portada
+        run: python3 .github/scripts/indice_reportes.py sitio
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: sitio
+      - name: Desplegar
+        id: despliegue
+        uses: actions/deploy-pages@v5
+      - name: Enlace en la página del run
+        run: echo "## 📊 Reportes publicados en ${{ steps.despliegue.outputs.page_url }}" >> "$GITHUB_STEP_SUMMARY"

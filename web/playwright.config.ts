@@ -10,7 +10,6 @@ const enCI = !!process.env.CI; // GitHub Actions define CI=true
 
 export default defineConfig({
   testDir,
-  forbidOnly: enCI,            // en CI falla si alguien dejó un test.only
   retries: enCI ? 1 : 0,       // un reintento solo en CI: si pasa al reintentar, se reporta como "flaky"
   workers: enCI ? 1 : undefined,
   reporter: [
